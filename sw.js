@@ -1,17 +1,13 @@
-// Service worker برای پلنر عادت‌ها — نسخه رو عوض کن تا کش قدیمی پاک بشه
 const CACHE_NAME = 'habit-planner-v1';
-const APP_SHELL = [
+const URLS_TO_CACHE = [
   './',
   './index.html',
-  './manifest.json',
-  './icon-192.png',
-  './icon-512.png',
-  './icon-maskable-512.png'
+  './manifest.json'
 ];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL))
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(URLS_TO_CACHE))
   );
   self.skipWaiting();
 });
@@ -26,32 +22,17 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  const req = event.request;
-  if (req.method !== 'GET') return;
-
-  const url = new URL(req.url);
-  const isSameOrigin = url.origin === self.location.origin;
-
-  if (isSameOrigin) {
-    // فایل‌های خود اپ: اول کش، بعد شبکه (برای کارکرد آفلاین)
-    event.respondWith(
-      caches.match(req).then((cached) => {
-        if (cached) return cached;
-        return fetch(req).then((res) => {
-          const resClone = res.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(req, resClone));
-          return res;
-        }).catch(() => cached);
-      })
-    );
-  } else {
-    // منابع بیرونی (مثل فونت گوگل): اول شبکه، بعد کش — اگه آفلاین بودیم از کش
-    event.respondWith(
-      fetch(req).then((res) => {
-        const resClone = res.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(req, resClone));
-        return res;
-      }).catch(() => caches.match(req))
-    );
-  }
+  if (event.request.method !== 'GET') return;
+  event.respondWith(
+    caches.match(event.request).then((cached) => {
+      const fetchPromise = fetch(event.request).then((response) => {
+        if (response && response.status === 200 && event.request.url.startsWith(self.location.origin)) {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+        }
+        return response;
+      }).catch(() => cached);
+      return cached || fetchPromise;
+    })
+  );
 });

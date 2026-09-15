@@ -4,6 +4,34 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
 <title>پلنر عادت‌ها</title>
+<script>
+(function(){
+  try{
+    var raw=localStorage.getItem('habit-planner-v1');
+    var mode='auto';
+    if(raw){ var s=JSON.parse(raw); if(s && s.compactMode) mode=s.compactMode; }
+    var isAndroid=/Android/i.test(navigator.userAgent);
+    var shouldCompact = (mode==='on') || (mode==='auto' && isAndroid);
+    if(shouldCompact) document.documentElement.classList.add('compact');
+    if(raw){
+      var s2=JSON.parse(raw);
+      if(s2 && s2.theme){
+        var t=s2.theme, root=document.documentElement.style;
+        if(t.bg) root.setProperty('--bg',t.bg);
+        if(t.paper) root.setProperty('--paper',t.paper);
+        if(t.accent){ root.setProperty('--accent',t.accent); root.setProperty('--accent-soft',t.accent+'22'); }
+        if(t.w && t.w.length===5){ for(var i=0;i<5;i++) root.setProperty('--w'+(i+1),t.w[i]); }
+      }
+      if(s2 && s2.background){
+        var bgv=s2.background, root2=document.documentElement.style;
+        if(bgv.type==='color'){ root2.setProperty('--bg-image','none'); root2.setProperty('--bg',bgv.value); }
+        else if(bgv.type==='gradient'){ root2.setProperty('--bg-image',bgv.value); }
+        else if(bgv.value){ root2.setProperty('--bg-image','url("'+bgv.value+'")'); }
+      }
+    }
+  }catch(e){}
+})();
+</script>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#20264D">
 <meta name="mobile-web-app-capable" content="yes">
@@ -48,11 +76,25 @@
     --w5:#4F7FE0; --w5-soft:#E7EDFB;
     --radius:14px;
     --shadow:0 1px 2px rgba(34,31,43,.04), 0 8px 24px -12px rgba(34,31,43,.10);
+    --habit-col-w:168px;
+    --goal-col-w:54px;
+    --day-col-w:38px;
+    --chk-size:26px;
+  }
+  html.compact{
+    --habit-col-w:104px;
+    --goal-col-w:36px;
+    --day-col-w:25px;
+    --chk-size:19px;
   }
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;}
   body{
-    background:var(--bg);
+    background-color:var(--bg);
+    background-image:var(--bg-image,none);
+    background-size:cover;
+    background-position:center;
+    background-attachment:fixed;
     color:var(--ink);
     font-family:'Vazirmatn', sans-serif;
     font-feature-settings:"tnum" 1;
@@ -140,13 +182,13 @@
   table.grid th,table.grid td{padding:0;text-align:center;}
   .habit-cell{
     position:sticky;right:0;background:var(--paper);z-index:2;
-    text-align:right !important;padding:8px 10px !important;min-width:168px;max-width:168px;
+    text-align:right !important;padding:8px 10px !important;min-width:var(--habit-col-w);max-width:var(--habit-col-w);
     box-shadow:-6px 0 8px -8px rgba(0,0,0,.25) inset;
     border-bottom:1px solid var(--line);
   }
   .goal-cell{
-    position:sticky;right:168px;background:var(--paper);z-index:2;
-    min-width:54px;max-width:54px;border-bottom:1px solid var(--line);
+    position:sticky;right:var(--habit-col-w);background:var(--paper);z-index:2;
+    min-width:var(--goal-col-w);max-width:var(--goal-col-w);border-bottom:1px solid var(--line);
     box-shadow:-6px 0 8px -8px rgba(0,0,0,.25) inset;
   }
   thead .habit-cell,thead .goal-cell{z-index:3;}
@@ -162,16 +204,16 @@
   .week-head-row th{
     padding:6px 2px;font-size:12px;font-weight:700;border-bottom:1px solid var(--line);
   }
-  .day-head-row th{padding:4px 2px 6px;border-bottom:1px solid var(--line);min-width:30px;}
+  .day-head-row th{padding:4px 2px 6px;border-bottom:1px solid var(--line);min-width:var(--day-col-w);}
   .day-head-row .wd{display:block;font-size:10px;color:var(--ink-soft);font-weight:500;}
   .day-head-row .dn{display:block;font-size:12px;font-weight:700;}
   .today-col{outline:2px solid var(--accent) !important;outline-offset:-2px;}
 
   td.day-cell{border-bottom:1px solid var(--line);padding:5px 3px !important;}
-  td.day-cell input{width:26px;height:26px;cursor:pointer;}
+  td.day-cell input{width:var(--chk-size);height:var(--chk-size);cursor:pointer;}
   input.habitcheck{
     appearance:none;-webkit-appearance:none;
-    width:26px;height:26px;border-radius:8px;
+    width:var(--chk-size);height:var(--chk-size);border-radius:8px;
     border:2px solid var(--w-color,var(--accent));
     background:#fff;position:relative;display:inline-block;cursor:pointer;
     transition:background .12s,transform .08s;
@@ -183,7 +225,18 @@
     width:6px;height:12px;border:solid #fff;border-width:0 2.5px 2.5px 0;
     transform:translate(-50%,-55%) rotate(35deg);
   }
-  .day-head-row th{min-width:38px;}
+  html.compact input.habitcheck:checked::after{
+    width:4px;height:9px;border-width:0 2px 2px 0;
+  }
+  html.compact .habit-cell{padding:5px 6px !important;}
+  html.compact .habit-name-row input.name-in{font-size:10.5px;}
+  html.compact .habit-name-row input.emoji-in{width:20px;font-size:12px;}
+  html.compact .goal-cell input{font-size:10.5px;padding:5px 0;}
+  html.compact table.grid{font-size:10px;}
+  html.compact .day-head-row .wd{display:none;}
+  html.compact .day-head-row .dn{font-size:10.5px;}
+  html.compact .week-head-row th{font-size:9.5px;padding:4px 1px;}
+  html.compact .del-x{font-size:11px;}
 
   .trend-wrap{margin-bottom:14px;border-bottom:1px solid var(--line);padding-bottom:10px;}
   .trend-box{height:130px;}
@@ -191,7 +244,8 @@
   .sum-row td, .sum-row th{padding:4px 2px;font-size:11px;color:var(--ink-soft);border-bottom:1px solid var(--line);}
   .sum-row.pct{font-weight:700;}
   .sum-label-cell{position:sticky;right:0;background:var(--paper);z-index:2;text-align:right !important;padding:4px 10px !important;font-weight:600;color:var(--ink) !important;}
-  .sum-label-goal{position:sticky;right:168px;background:var(--paper);z-index:2;}
+  .sum-label-goal{position:sticky;right:var(--habit-col-w);background:var(--paper);z-index:2;}
+
 
   .add-row .habit-cell,.add-row .goal-cell{background:#FCFBF7;}
   .add-row-btn{
@@ -268,6 +322,7 @@
         <button id="prevMonth">‹</button>
         <span class="month-label" id="monthLabel">—</span>
         <button id="nextMonth">›</button>
+        <button id="openSettings" title="تنظیمات" style="margin-right:6px;">⚙️</button>
       </div>
     </div>
     <div class="streak">
@@ -301,6 +356,29 @@
       <div>
         <h2 style="margin-bottom:2px;">عادات روزانه</h2>
         <p class="sub" style="margin-bottom:0;" id="habitCountSub">۰ عادت</p>
+      </div>
+      <button class="add-btn" id="openAddHabit">+ افزودن عادت جدید</button>
+    </div>
+    <div id="addHabitPanel" style="display:none;background:#FCFBF7;border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:14px;">
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
+        <div style="position:relative;">
+          <label style="display:block;font-size:11px;color:var(--ink-soft);margin-bottom:4px;">ایموجی</label>
+          <input id="newEmoji" value="✨" maxlength="2" readonly style="width:52px;text-align:center;font-size:18px;padding:7px;border:1px solid var(--line);border-radius:8px;font-family:inherit;cursor:pointer;background:#fff;">
+          <div id="emojiPicker" style="display:none;position:absolute;top:100%;right:0;margin-top:4px;background:#fff;border:1px solid var(--line);border-radius:10px;padding:8px;box-shadow:var(--shadow);z-index:20;width:300px;">
+            <div id="emojiTabs" style="display:flex;gap:2px;margin-bottom:6px;overflow-x:auto;border-bottom:1px solid var(--line);padding-bottom:6px;"></div>
+            <div id="emojiGrid" style="display:grid;grid-template-columns:repeat(8,1fr);gap:2px;max-height:180px;overflow-y:auto;"></div>
+          </div>
+        </div>
+        <div style="flex:1;min-width:140px;">
+          <label style="display:block;font-size:11px;color:var(--ink-soft);margin-bottom:4px;">نام عادت</label>
+          <input id="newName" placeholder="مثلاً: مدیتیشن ۱۰ دقیقه" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:8px;font-family:inherit;font-size:13px;">
+        </div>
+        <div>
+          <label style="display:block;font-size:11px;color:var(--ink-soft);margin-bottom:4px;">هدف (روز در ماه)</label>
+          <input id="newGoal" type="number" min="1" style="width:80px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;font-family:inherit;font-size:13px;text-align:center;">
+        </div>
+        <button id="addHabitBtn" style="padding:9px 20px;border:none;border-radius:8px;background:var(--accent);color:#fff;font-family:inherit;font-weight:700;font-size:13px;cursor:pointer;">افزودن</button>
+        <button id="cancelAddHabit" style="padding:9px 16px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink-soft);font-family:inherit;font-size:13px;cursor:pointer;">انصراف</button>
       </div>
     </div>
     <div class="trend-wrap">
@@ -352,6 +430,72 @@
 </div>
 </div>
 
+<div id="holidayOverlay" style="display:none;position:fixed;inset:0;background:rgba(20,18,40,.55);z-index:9997;align-items:center;justify-content:center;padding:16px;">
+  <div style="background:var(--paper);border-radius:20px;max-width:340px;width:100%;padding:24px 22px;font-family:'Vazirmatn',sans-serif;text-align:center;">
+    <div style="font-size:32px;margin-bottom:8px;">📅</div>
+    <h2 id="holidayModalTitle" style="margin:0 0 4px;font-size:16px;">تعطیلات این ماه</h2>
+    <p id="holidayModalSub" style="margin:0 0 16px;font-size:12px;color:var(--ink-soft);"></p>
+    <div id="holidayModalList" style="text-align:right;max-height:240px;overflow-y:auto;"></div>
+    <button id="closeHolidayModal" style="margin-top:18px;width:100%;padding:10px;border:none;border-radius:12px;background:var(--accent);color:#fff;font-family:inherit;font-weight:700;font-size:13px;cursor:pointer;">باشه، متوجه شدم</button>
+  </div>
+</div>
+
+<div id="settingsOverlay" style="display:none;position:fixed;inset:0;background:rgba(20,18,40,.55);z-index:9998;align-items:center;justify-content:center;padding:16px;">
+  <div style="background:var(--paper);border-radius:16px;max-width:420px;width:100%;max-height:88vh;overflow-y:auto;padding:20px;font-family:'Vazirmatn',sans-serif;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+      <h2 style="margin:0;font-size:16px;">تنظیمات ظاهر</h2>
+      <button id="closeSettings" style="border:none;background:none;font-size:18px;cursor:pointer;color:var(--ink-soft);">✕</button>
+    </div>
+
+    <div style="margin-bottom:14px;">
+      <label style="display:block;font-size:12.5px;font-weight:700;margin-bottom:8px;">حالت فشرده (مناسب گوشی)</label>
+      <select id="compactModeSelect" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:8px;font-family:inherit;font-size:13px;">
+        <option value="auto">خودکار (پیشنهادی — با اندروید خودش کوچیک می‌شه)</option>
+        <option value="on">همیشه فشرده</option>
+        <option value="off">همیشه عادی</option>
+      </select>
+    </div>
+
+    <div style="margin-bottom:14px;display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <div>
+        <label style="display:block;font-size:12px;color:var(--ink-soft);margin-bottom:5px;">رنگ پس‌زمینه</label>
+        <input type="color" id="themeBg" style="width:100%;height:36px;border:1px solid var(--line);border-radius:8px;padding:2px;">
+      </div>
+      <div>
+        <label style="display:block;font-size:12px;color:var(--ink-soft);margin-bottom:5px;">رنگ کارت‌ها</label>
+        <input type="color" id="themePaper" style="width:100%;height:36px;border:1px solid var(--line);border-radius:8px;padding:2px;">
+      </div>
+      <div style="grid-column:1/-1;">
+        <label style="display:block;font-size:12px;color:var(--ink-soft);margin-bottom:5px;">رنگ اصلی (دکمه‌ها و تاکیدها)</label>
+        <input type="color" id="themeAccent" style="width:100%;height:36px;border:1px solid var(--line);border-radius:8px;padding:2px;">
+      </div>
+    </div>
+
+    <div style="margin-bottom:16px;">
+      <label style="display:block;font-size:12.5px;font-weight:700;margin-bottom:8px;">رنگ هفته‌های جدول عادات (۱ تا ۵)</label>
+      <div style="display:flex;gap:8px;">
+        <input type="color" id="themeW1" style="flex:1;height:36px;border:1px solid var(--line);border-radius:8px;padding:2px;">
+        <input type="color" id="themeW2" style="flex:1;height:36px;border:1px solid var(--line);border-radius:8px;padding:2px;">
+        <input type="color" id="themeW3" style="flex:1;height:36px;border:1px solid var(--line);border-radius:8px;padding:2px;">
+        <input type="color" id="themeW4" style="flex:1;height:36px;border:1px solid var(--line);border-radius:8px;padding:2px;">
+        <input type="color" id="themeW5" style="flex:1;height:36px;border:1px solid var(--line);border-radius:8px;padding:2px;">
+      </div>
+    </div>
+
+    <div style="margin-bottom:16px;">
+      <label style="display:block;font-size:12.5px;font-weight:700;margin-bottom:8px;">پس‌زمینه صفحه</label>
+      <div id="bgGallery" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;"></div>
+      <input type="file" id="bgUploadInput" accept="image/*" style="display:none;">
+      <p style="font-size:11px;color:var(--ink-soft);margin:8px 0 0;">تصاویر از اینترنت لود می‌شن، پس برای دیدنشون به اینترنت نیاز داری. رنگ‌ها و گرادینت‌ها همیشه کار می‌کنن.</p>
+    </div>
+
+    <div style="display:flex;gap:8px;">
+      <button id="saveSettingsBtn" style="flex:1;padding:10px;border:none;border-radius:9px;background:var(--accent);color:#fff;font-family:inherit;font-weight:700;font-size:13px;cursor:pointer;">ذخیره</button>
+      <button id="resetSettingsBtn" style="padding:10px 16px;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--ink-soft);font-family:inherit;font-size:13px;cursor:pointer;">بازنشانی</button>
+    </div>
+  </div>
+</div>
+
 <script>
 /* =========================================================
    Simple access gate — رمز رو همین‌جا عوض کن
@@ -363,6 +507,7 @@ var APP_PASSWORD = "1234"; // <-- رمز عبور رو اینجا به دلخو�
   if(savedOk){
     document.getElementById('lockScreen').style.display='none';
     document.getElementById('appRoot').style.display='block';
+    window.__showHolidayPopup=true;
     return;
   }
   document.getElementById('lockBtn').addEventListener('click', tryUnlock);
@@ -375,6 +520,8 @@ var APP_PASSWORD = "1234"; // <-- رمز عبور رو اینجا به دلخو�
       sessionStorage.setItem('habitPlannerUnlocked','yes');
       document.getElementById('lockScreen').style.display='none';
       document.getElementById('appRoot').style.display='block';
+      window.__showHolidayPopup=true;
+      if(window.__onUnlocked) window.__onUnlocked();
     } else {
       document.getElementById('lockError').textContent = 'رمز اشتباهه، دوباره امتحان کن';
     }
@@ -469,6 +616,53 @@ function jalaliWeekday(jy,jm,jd){
 var JALALI_MONTH_NAMES=['فروردین','اردیبهشت','خرداد','تیر','مرداد','شهریور','مهر','آبان','آذر','دی','بهمن','اسفند'];
 
 /* =========================================================
+   Iran official holidays
+   - HOLIDAYS_FIXED: civil holidays with a fixed Jalali date, apply every year
+   - HOLIDAYS_BY_YEAR: full list (fixed + lunar-based Islamic holidays already
+     converted to Jalali) for a specific Jalali year. Lunar holidays shift
+     every year, so this is only precisely accurate for the year(s) listed.
+   ========================================================= */
+var HOLIDAYS_FIXED={ // month(1-12) -> {day: title}
+  1:{1:'عید نوروز',2:'عید نوروز',3:'عید نوروز',4:'عید نوروز',12:'روز جمهوری اسلامی',13:'سیزده به در'},
+  3:{14:'رحلت امام خمینی',15:'قیام ۱۵ خرداد'},
+  11:{22:'پیروزی انقلاب اسلامی'},
+  12:{29:'روز ملی شدن صنعت نفت'}
+};
+var HOLIDAYS_BY_YEAR={
+  1405:{
+    1:{1:'عید نوروز / عید فطر',2:'عید نوروز / تعطیل عید فطر',3:'عید نوروز',4:'عید نوروز',12:'روز جمهوری اسلامی',13:'سیزده به در'},
+    3:{6:'عید سعید قربان',14:'رحلت امام خمینی / عید غدیر خم',15:'قیام ۱۵ خرداد'},
+    4:{3:'تاسوعای حسینی',4:'عاشورای حسینی'},
+    5:{13:'اربعین حسینی',21:'رحلت رسول اکرم / شهادت امام حسن مجتبی (ع)',22:'شهادت امام رضا (ع)'},
+    6:{8:'میلاد رسول اکرم و امام جعفر صادق (ع)'},
+    8:{22:'شهادت حضرت فاطمه زهرا (س)'},
+    9:{9:'ولادت حضرت فاطمه زهرا (س) / روز مادر'},
+    10:{2:'ولادت امام علی (ع) / روز پدر',16:'مبعث رسول اکرم (ص)'},
+    11:{4:'ولادت امام زمان (عج) / نیمه شعبان',22:'پیروزی انقلاب اسلامی'},
+    12:{9:'شهادت حضرت علی (ع)',19:'عید سعید فطر',20:'تعطیل به مناسبت عید فطر',29:'روز ملی شدن صنعت نفت'}
+  }
+};
+function isHoliday(jy,jm,jd){
+  var isFriday=(jalaliWeekday(jy,jm,jd)==='ج');
+  var yearTable=HOLIDAYS_BY_YEAR[jy];
+  var title=null;
+  if(yearTable && yearTable[jm] && yearTable[jm][jd]) title=yearTable[jm][jd];
+  else if(HOLIDAYS_FIXED[jm] && HOLIDAYS_FIXED[jm][jd]) title=HOLIDAYS_FIXED[jm][jd];
+  if(title) return {holiday:true, title:title};
+  if(isFriday) return {holiday:true, title:'جمعه'};
+  return {holiday:false, title:null};
+}
+function monthHolidayList(jy,jm){
+  var days=jalMonthLength(jy,jm);
+  var list=[];
+  for(var d=1;d<=days;d++){
+    var h=isHoliday(jy,jm,d);
+    if(h.holiday && h.title!=='جمعه') list.push({day:d, title:h.title});
+  }
+  return list;
+}
+
+/* =========================================================
    State
    ========================================================= */
 var STORE_KEY='habit-planner-v1';
@@ -477,6 +671,112 @@ var todayJ=(function(){var t=new Date();return toJalaali(t.getFullYear(),t.getMo
 var store=loadStore();
 var curJY=store.currentJY||todayJ.jy;
 var curJM=store.currentJM||todayJ.jm;
+
+var THEME_DEFAULTS={
+  bg:'#FBF8F3', paper:'#FFFFFF', accent:'#3D4FE0',
+  w:['#2C9E8F','#D79A3A','#D1554A','#7C5FE0','#4F7FE0']
+};
+var THEME={
+  bg:(store.theme&&store.theme.bg)||THEME_DEFAULTS.bg,
+  paper:(store.theme&&store.theme.paper)||THEME_DEFAULTS.paper,
+  accent:(store.theme&&store.theme.accent)||THEME_DEFAULTS.accent,
+  w:(store.theme&&store.theme.w&&store.theme.w.length===5)?store.theme.w.slice():THEME_DEFAULTS.w.slice()
+};
+if(!store.compactMode) store.compactMode='auto';
+
+function lightenHex(hex,amt){
+  hex=(hex||'#000000').replace('#','');
+  if(hex.length===3) hex=hex.split('').map(function(c){return c+c;}).join('');
+  var r=parseInt(hex.substring(0,2),16)||0, g=parseInt(hex.substring(2,4),16)||0, b=parseInt(hex.substring(4,6),16)||0;
+  r=Math.round(r+(255-r)*amt); g=Math.round(g+(255-g)*amt); b=Math.round(b+(255-b)*amt);
+  return '#'+[r,g,b].map(function(v){return v.toString(16).padStart(2,'0');}).join('');
+}
+function applyThemeToRoot(){
+  var root=document.documentElement.style;
+  root.setProperty('--bg',THEME.bg);
+  root.setProperty('--paper',THEME.paper);
+  root.setProperty('--accent',THEME.accent);
+  root.setProperty('--accent-soft',lightenHex(THEME.accent,0.87));
+  for(var i=0;i<5;i++) root.setProperty('--w'+(i+1),THEME.w[i]);
+}
+applyThemeToRoot();
+
+var BACKGROUND_OPTIONS=[
+  {type:'color', label:'کرمی', value:'#FBF8F3'},
+  {type:'color', label:'سفید', value:'#FFFFFF'},
+  {type:'color', label:'خاکستری روشن', value:'#EDEFF3'},
+  {type:'color', label:'تیره', value:'#1B1E2B'},
+  {type:'gradient', label:'غروب', value:'linear-gradient(135deg,#FDCB82,#E8695B 55%,#7C3F62)'},
+  {type:'gradient', label:'اقیانوس', value:'linear-gradient(135deg,#1CB5B0,#2B6CB0 60%,#20264D)'},
+  {type:'gradient', label:'شفق بنفش', value:'linear-gradient(135deg,#3D2F6B,#7C5FE0 55%,#20264D)'},
+  {type:'gradient', label:'بامداد', value:'linear-gradient(135deg,#F6D365,#FDA085)'},
+  {type:'image', label:'باران و اراده', value:'https://images.unsplash.com/photo-1764668746571-55375f7dd120?w=1600&q=70&auto=format&fit=crop'},
+  {type:'image', label:'طلوع کوهستان', value:'https://images.unsplash.com/photo-1749576502454-a0fa6ae62a48?w=1600&q=70&auto=format&fit=crop'},
+  {type:'image', label:'امواج آرام', value:'https://images.unsplash.com/photo-1744648617182-519c4bf39e30?w=1600&q=70&auto=format&fit=crop'},
+  {type:'image', label:'شب شهر', value:'https://images.unsplash.com/photo-1530258614483-0185dc8d6632?w=1600&q=70&auto=format&fit=crop'},
+  {type:'image', label:'جنگل مه‌آلود', value:'https://images.unsplash.com/photo-1760479099643-b37a52e7c094?w=1600&q=70&auto=format&fit=crop'}
+];
+if(!store.background) store.background={type:'color', value:THEME_DEFAULTS.bg};
+var pendingBackground=JSON.parse(JSON.stringify(store.background));
+
+function applyBackground(bg){
+  var root=document.documentElement.style;
+  if(!bg||bg.type==='color'){
+    root.setProperty('--bg-image','none');
+    if(bg&&bg.value){ THEME.bg=bg.value; applyThemeToRoot(); }
+  } else if(bg.type==='gradient'){
+    root.setProperty('--bg-image',bg.value);
+  } else { // image or custom
+    root.setProperty('--bg-image','url("'+bg.value+'")');
+  }
+}
+applyBackground(store.background);
+
+function buildBgGallery(){
+  var el=document.getElementById('bgGallery');
+  if(!el) return;
+  var html=BACKGROUND_OPTIONS.map(function(opt,i){
+    var thumb = opt.type==='image' ? ("background-image:url('"+opt.value.replace('w=1600','w=160')+"');background-size:cover;background-position:center;") : ('background:'+opt.value+';');
+    var selected = (pendingBackground.type===opt.type && pendingBackground.value===opt.value);
+    return '<button type="button" class="bg-opt" data-i="'+i+'" title="'+opt.label+'" style="height:46px;border-radius:8px;border:2px solid '+(selected?'var(--accent)':'var(--line)')+';cursor:pointer;'+thumb+'"></button>';
+  }).join('');
+  var customSelected = (pendingBackground.type==='custom');
+  html += '<button type="button" id="bgCustomBtn" style="height:46px;border-radius:8px;border:2px dashed '+(customSelected?'var(--accent)':'var(--line)')+';cursor:pointer;font-size:18px;color:var(--ink-soft);'+(customSelected?"background-image:url('"+pendingBackground.value+"');background-size:cover;background-position:center;":'background:#FCFBF7;')+'">'+(customSelected?'':'+')+'</button>';
+  el.innerHTML=html;
+  el.querySelectorAll('.bg-opt').forEach(function(btn){
+    btn.addEventListener('click',function(){
+      var opt=BACKGROUND_OPTIONS[parseInt(this.getAttribute('data-i'))];
+      pendingBackground={type:opt.type, value:opt.value};
+      applyBackground(pendingBackground);
+      buildBgGallery();
+    });
+  });
+  document.getElementById('bgCustomBtn').addEventListener('click',function(){
+    document.getElementById('bgUploadInput').click();
+  });
+}
+document.getElementById('bgUploadInput').addEventListener('change',function(e){
+  var file=e.target.files&&e.target.files[0];
+  if(!file) return;
+  var reader=new FileReader();
+  reader.onload=function(ev){
+    var img=new Image();
+    img.onload=function(){
+      var maxW=1600;
+      var scale=Math.min(1,maxW/img.width);
+      var canvas=document.createElement('canvas');
+      canvas.width=img.width*scale; canvas.height=img.height*scale;
+      var ctx=canvas.getContext('2d');
+      ctx.drawImage(img,0,0,canvas.width,canvas.height);
+      var dataUrl=canvas.toDataURL('image/jpeg',0.72);
+      pendingBackground={type:'custom', value:dataUrl};
+      applyBackground(pendingBackground);
+      buildBgGallery();
+    };
+    img.src=ev.target.result;
+  };
+  reader.readAsDataURL(file);
+});
 
 function loadStore(){
   try{
@@ -487,6 +787,7 @@ function loadStore(){
 }
 function saveStore(){
   store.currentJY=curJY; store.currentJM=curJM;
+  store.theme=THEME; 
   localStorage.setItem(STORE_KEY, JSON.stringify(store));
 }
 function monthKey(jy,jm){return jy+'-'+jm;}
@@ -564,12 +865,10 @@ function weekColorVar(weekIdx){ // 0-based
   return colors[weekIdx%colors.length];
 }
 function weekColorHex(weekIdx){
-  var colors=['#2C9E8F','#D79A3A','#D1554A','#7C5FE0','#4F7FE0'];
-  return colors[weekIdx%colors.length];
+  return THEME.w[weekIdx%THEME.w.length];
 }
 function weekSoftHex(weekIdx){
-  var colors=['#E3F3F0','#FBF1DF','#FBE7E4','#ECE7FB','#E7EDFB'];
-  return colors[weekIdx%colors.length];
+  return lightenHex(THEME.w[weekIdx%THEME.w.length],0.85);
 }
 var WEEK_LABELS=['هفته اول','هفته دوم','هفته سوم','هفته چهارم','هفته پنجم'];
 
@@ -590,7 +889,10 @@ function renderDailyTable(data,daysInMonth,todayDay){
   for(var d=1;d<=daysInMonth;d++){
     var w=Math.floor((d-1)/7);
     var isToday=(d===todayDay);
-    html+='<th style="background:'+weekSoftHex(w)+';'+(isToday?'position:relative;':'')+'" class="'+(isToday?'today-col':'')+'">'+
+    var hInfo=isHoliday(curJY,curJM,d);
+    var headBg = hInfo.holiday ? '#F6C9C9' : weekSoftHex(w);
+    var headColor = hInfo.holiday ? '#B32424' : '';
+    html+='<th style="background:'+headBg+';'+(headColor?('color:'+headColor+';'):'')+(isToday?'position:relative;':'')+'" class="'+(isToday?'today-col':'')+'"'+(hInfo.holiday?(' title="'+escAttr(hInfo.title)+'"'):'')+'>'+
       '<span class="wd">'+jalaliWeekday(curJY,curJM,d)+'</span><span class="dn">'+d+'</span></th>';
   }
   html+='</tr></thead><tbody>';
@@ -607,21 +909,15 @@ function renderDailyTable(data,daysInMonth,todayDay){
       var w=Math.floor((d-1)/7);
       var checked=!!(data.checks[h.id]&&data.checks[h.id][d]);
       var isToday=(d===todayDay);
-      html+='<td class="day-cell '+(isToday?'today-col':'')+'" style="--w-color:'+weekColorHex(w)+';background:'+(checked?weekSoftHex(w):'transparent')+';">'+
-        '<input type="checkbox" class="habitcheck" style="--w-color:'+weekColorHex(w)+';" data-hid="'+h.id+'" data-day="'+d+'" '+(checked?'checked':'')+'>'+
+      var hInfo=isHoliday(curJY,curJM,d);
+      var dayColor = hInfo.holiday ? '#DC3B3B' : weekColorHex(w);
+      var dayBg = checked ? (hInfo.holiday?'#F8D6D6':weekSoftHex(w)) : (hInfo.holiday?'#FCEDED':'transparent');
+      html+='<td class="day-cell '+(isToday?'today-col':'')+'" style="--w-color:'+dayColor+';background:'+dayBg+';"'+(hInfo.holiday?(' title="'+escAttr(hInfo.title)+'"'):'')+'>'+
+        '<input type="checkbox" class="habitcheck" style="--w-color:'+dayColor+';" data-hid="'+h.id+'" data-day="'+d+'" '+(checked?'checked':'')+'>'+
         '</td>';
     }
     html+='</tr>';
   });
-
-  // add-row
-  html+='<tr class="add-row"><td class="habit-cell"><div class="habit-name-row">'+
-    '<input class="emoji-in" id="newEmoji" value="✨" maxlength="2">'+
-    '<input class="name-in" id="newName" placeholder="عادت جدید...">'+
-    '</div></td>'+
-    '<td class="goal-cell"><input type="number" id="newGoal" min="1" value="'+daysInMonth+'"></td>'+
-    '<td colspan="'+daysInMonth+'" style="padding:0;background:#FCFBF7;"><button class="add-row-btn" id="addHabitBtn">+ افزودن عادت</button></td>'+
-    '</tr>';
 
   // summary rows
   var doneArr=[],totalArr=[],pctArr=[];
@@ -671,15 +967,6 @@ function renderDailyTable(data,daysInMonth,todayDay){
       delete data.checks[hid];
       saveStore(); render();
     });
-  });
-  var addBtn=document.getElementById('addHabitBtn');
-  if(addBtn) addBtn.addEventListener('click',function(){
-    var name=document.getElementById('newName').value.trim();
-    var emoji=document.getElementById('newEmoji').value.trim()||'✅';
-    var goal=Math.max(1,parseInt(document.getElementById('newGoal').value)||daysInMonth);
-    if(!name) return;
-    data.habits.push({id:uid(),emoji:emoji,name:name,goal:goal});
-    saveStore(); render();
   });
 }
 
@@ -930,7 +1217,181 @@ document.getElementById('addMonthlyBtn').addEventListener('click',function(){
   saveStore(); render();
 });
 
+/* ---------- Settings modal ---------- */
+function applyCompactMode(){
+  var mode=store.compactMode||'auto';
+  var isAndroid=/Android/i.test(navigator.userAgent);
+  var shouldCompact=(mode==='on')||(mode==='auto'&&isAndroid);
+  document.documentElement.classList.toggle('compact',shouldCompact);
+}
+function openSettingsPanel(){
+  document.getElementById('themeBg').value=THEME.bg;
+  document.getElementById('themePaper').value=THEME.paper;
+  document.getElementById('themeAccent').value=THEME.accent;
+  document.getElementById('themeW1').value=THEME.w[0];
+  document.getElementById('themeW2').value=THEME.w[1];
+  document.getElementById('themeW3').value=THEME.w[2];
+  document.getElementById('themeW4').value=THEME.w[3];
+  document.getElementById('themeW5').value=THEME.w[4];
+  document.getElementById('compactModeSelect').value=store.compactMode||'auto';
+  pendingBackground=JSON.parse(JSON.stringify(store.background));
+  buildBgGallery();
+  document.getElementById('settingsOverlay').style.display='flex';
+}
+document.getElementById('openSettings').addEventListener('click',openSettingsPanel);
+document.getElementById('closeSettings').addEventListener('click',function(){
+  applyBackground(store.background);
+  document.getElementById('settingsOverlay').style.display='none';
+});
+document.getElementById('settingsOverlay').addEventListener('click',function(e){
+  if(e.target===this){
+    applyBackground(store.background);
+    this.style.display='none';
+  }
+});
+document.getElementById('saveSettingsBtn').addEventListener('click',function(){
+  THEME.bg=document.getElementById('themeBg').value;
+  THEME.paper=document.getElementById('themePaper').value;
+  THEME.accent=document.getElementById('themeAccent').value;
+  THEME.w=[
+    document.getElementById('themeW1').value,
+    document.getElementById('themeW2').value,
+    document.getElementById('themeW3').value,
+    document.getElementById('themeW4').value,
+    document.getElementById('themeW5').value
+  ];
+  store.compactMode=document.getElementById('compactModeSelect').value;
+  store.background=pendingBackground;
+  applyThemeToRoot();
+  applyBackground(store.background);
+  applyCompactMode();
+  saveStore();
+  render();
+  document.getElementById('settingsOverlay').style.display='none';
+});
+document.getElementById('resetSettingsBtn').addEventListener('click',function(){
+  THEME.bg=THEME_DEFAULTS.bg; THEME.paper=THEME_DEFAULTS.paper; THEME.accent=THEME_DEFAULTS.accent;
+  THEME.w=THEME_DEFAULTS.w.slice();
+  store.compactMode='auto';
+  store.background={type:'color', value:THEME_DEFAULTS.bg};
+  pendingBackground=JSON.parse(JSON.stringify(store.background));
+  applyThemeToRoot();
+  applyBackground(store.background);
+  applyCompactMode();
+  saveStore();
+  render();
+  openSettingsPanel();
+});
+applyCompactMode();
+
+/* ---------- Add-habit panel + emoji picker ---------- */
+var EMOJI_CATEGORIES={
+  'رایج':['⏰','💧','💪','📚','🧘','❄️','🚶','🏃','🚴','🏊','🥗','🍎','🚭','📵','💻','🎯','🧹','🙏','🎸','🎨','🧴','🪥','🧺','💊','❤️','🌱','☕','🛌','😴','✨'],
+  'لبخندها':['😀','😃','😄','😁','😆','😅','😂','🤣','😊','😇','🙂','🙃','😉','😌','😍','🥰','😘','😗','😙','😚','😋','😛','😝','😜','🤪','🤨','🧐','🤓','😎','🥸','🤩','🥳','😏','😒','😞','😔','😟','😕','🙁','☹️','😣','😖','😫','😩','🥺','😢','😭','😤','😠','😡','🤬','🤯','😳','🥵','🥶','😱','😨','😰','😥','😓','🤗','🤔','🤭','🤫','🤥','😶','😐','😑','😬','🙄','😯','😦','😧','😮','😲','🥱','😴','🤤','😪','😵','🤐','🥴','🤢','🤮','🤧','😷','🤒','🤕'],
+  'افراد':['👋','🤚','🖐️','✋','🖖','👌','🤌','🤏','✌️','🤞','🤟','🤘','🤙','👈','👉','👆','🖕','👇','☝️','👍','👎','✊','👊','🤛','🤜','👏','🙌','👐','🤲','🤝','🙏','✍️','💅','🤳','💪','🦾','🦵','🦿','🦶','👂','🦻','👃','🧠','🦷','🦴','👀','👁️','👅','👄','👶','🧒','👦','👧','🧑','👱','👨','🧔','👩','🧓','👴','👵','🙍','🙎','🙅','🙆','💁','🙋','🧏','🙇','🤦','🤷','👮','🕵️','💂','👷','🤴','👸','👳','👲','🧕','🤵','👰','🤰','🤱','👼','🎅','🤶','🦸','🦹','🧙','🧚','🧛','🧜','🧝','🧞','🧟','💆','💇','🚶','🧍','🧎','🏃','💃','🕺','👯','🧖','🧗','🤺','🏇','⛷️','🏂','🏌️','🏄','🚣','🏊','⛹️','🏋️','🚴','🚵','🤸','🤼','🤽','🤾','🤹','🧘','🛀','🛌'],
+  'حیوانات':['🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼','🐻‍❄️','🐨','🐯','🦁','🐮','🐷','🐽','🐸','🐵','🙈','🙉','🙊','🐒','🐔','🐧','🐦','🐤','🐣','🐥','🦆','🦅','🦉','🦇','🐺','🐗','🐴','🦄','🐝','🪱','🐛','🦋','🐌','🐞','🐜','🪰','🦟','🦗','🕷️','🕸️','🦂','🐢','🐍','🦎','🦖','🦕','🐙','🦑','🦐','🦞','🦀','🐡','🐠','🐟','🐬','🐳','🐋','🦈','🐊','🐅','🐆','🦓','🦍','🦧','🦣','🐘','🦛','🦏','🐪','🐫','🦒','🦘','🐃','🐂','🐄','🐎','🐖','🐏','🐑','🦙','🐐','🦌','🐕','🐩','🦮','🐈','🐓','🦃','🦤','🦚','🦜','🦢','🦩','🕊️','🐇','🦝','🦨','🦡','🦫','🦦','🦥','🐁','🐀','🐿️','🦔'],
+  'غذا':['🍏','🍎','🍐','🍊','🍋','🍌','🍉','🍇','🍓','🫐','🍈','🍒','🍑','🥭','🍍','🥥','🥝','🍅','🍆','🥑','🥦','🥬','🥒','🌶️','🫑','🌽','🥕','🫒','🧄','🧅','🥔','🍠','🥐','🥯','🍞','🥖','🥨','🧀','🥚','🍳','🧈','🥞','🧇','🥓','🥩','🍗','🍖','🌭','🍔','🍟','🍕','🫓','🥪','🥙','🧆','🌮','🌯','🫔','🥗','🥘','🫕','🥫','🍝','🍜','🍲','🍛','🍣','🍱','🥟','🦪','🍤','🍙','🍚','🍘','🍥','🥠','🥮','🍢','🍡','🍧','🍨','🍦','🥧','🧁','🍰','🎂','🍮','🍭','🍬','🍫','🍿','🍩','🍪','🌰','🥜','🍯','🥛','🍼','☕','🍵','🧃','🥤','🧋','🍶','🍺','🍻','🥂','🍷','🥃','🍸','🍹','🧉','🍾','🧊'],
+  'فعالیت':['⚽','🏀','🏈','⚾','🥎','🎾','🏐','🏉','🥏','🎱','🪀','🏓','🏸','🏒','🏑','🥍','🏏','🪃','🥅','⛳','🪁','🏹','🎣','🤿','🥊','🥋','🎽','🛹','🛼','🛷','⛸️','🥌','🎿','⛷️','🏂','🪂','🏋️','🤼','🤸','⛹️','🤺','🤾','🏌️','🏇','🧘','🏄','🏊','🤽','🚣','🧗','🚵','🚴','🏆','🥇','🥈','🥉','🏅','🎖️','🎗️','🎫','🎟️','🎪','🤹','🎭','🩰','🎨','🎬','🎤','🎧','🎼','🎹','🥁','🪘','🎷','🎺','🪗','🎸','🪕','🎻','🎲','♟️','🎯','🎳','🎮','🎰','🧩'],
+  'سفر':['🚗','🚕','🚙','🚌','🚎','🏎️','🚓','🚑','🚒','🚐','🛻','🚚','🚛','🚜','🛵','🏍️','🛺','🚲','🛴','🛹','🚨','🚔','🚍','🚘','🚖','🚡','🚠','🚟','🚃','🚋','🚞','🚝','🚄','🚅','🚈','🚂','🚆','🚇','🚊','🚉','✈️','🛫','🛬','🛩️','💺','🛰️','🚀','🛸','🚁','🛶','⛵','🚤','🛥️','🛳️','⛴️','🚢','⚓','🪝','⛽','🚧','🚦','🚥','🗺️','🗿','🗽','🗼','🏰','🏯','🏟️','🎡','🎢','🎠','⛲','⛱️','🏖️','🏝️','🏜️','🌋','⛰️','🏔️','🗻','🏕️','⛺','🏠','🏡','🏘️','🏚️','🏗️','🏭','🏢','🏬','🏣','🏤','🏥','🏦','🏨','🏪','🏫','🏩','💒','🕌','🕍','🛕','🕋'],
+  'اشیا':['⌚','📱','💻','⌨️','🖥️','🖨️','🖱️','🖲️','🕹️','💽','💾','💿','📀','📷','📸','📹','🎥','📞','☎️','📟','📠','📺','📻','🎙️','🎚️','🎛️','🧭','⏱️','⏲️','⏰','🕰️','⌛','⏳','📡','🔋','🔌','💡','🔦','🕯️','🪔','🧯','🛢️','💸','💵','💴','💶','💷','💰','💳','🧾','💎','⚖️','🪜','🧰','🔧','🔨','⚒️','🛠️','⛏️','🪓','🪚','🔩','⚙️','🪤','🧱','⛓️','🧲','🔫','💣','🧨','🪃','🔪','🗡️','⚔️','🛡️','🚬','⚰️','🪦','⚱️','🏺','🔮','📿','🧿','💈','⚗️','🔭','🔬','🕳️','🩹','💊','💉','🩺','🌡️','🧬','🦠','🧫','🧪','🧹','🧺','🧻','🚽','🚿','🛁','🧴','🧷','🧽','🪣','🧼','🪥','🪒','🧵','🪡','🧶','🪢'],
+  'نماد‌ها':['❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔','❣️','💕','💞','💓','💗','💖','💘','💝','💟','☮️','✝️','☪️','🕉️','☸️','✡️','🔯','🕎','☯️','☦️','🛐','⛎','♈','♉','♊','♋','♌','♍','♎','♏','♐','♑','♒','♓','🆔','⚛️','🉑','☢️','☣️','📴','📳','🈶','🈚','🈸','🈺','🈷️','✴️','🆚','💮','🉐','㊙️','㊗️','🈴','🈵','🈹','🈲','🅰️','🅱️','🆎','🆑','🅾️','🆘','❌','⭕','🛑','⛔','📛','🚫','💯','💢','♨️','🚷','🚯','🚳','🚱','🔞','📵','🚭','❗','❓','❕','❔','‼️','⁉️','🔅','🔆','〽️','⚠️','🚸','🔱','⚜️','🔰','♻️','✅','🈯','💹','❇️','✳️','❎','🌐','💠','Ⓜ️','🌀','💤','🏧','🚾','♿','🅿️','🈳','🈂️','🛂','🛃','🛄','🛅']
+};
+var EMOJI_ACTIVE_CAT='رایج';
+function buildEmojiPicker(){
+  var tabs=document.getElementById('emojiTabs');
+  tabs.innerHTML=Object.keys(EMOJI_CATEGORIES).map(function(cat){
+    var active=(cat===EMOJI_ACTIVE_CAT);
+    return '<button type="button" class="emoji-tab" data-cat="'+cat+'" style="border:none;background:'+(active?'var(--accent-soft)':'none')+';color:'+(active?'var(--accent)':'var(--ink-soft)')+';font-size:11px;padding:4px 8px;border-radius:6px;cursor:pointer;white-space:nowrap;font-family:inherit;font-weight:'+(active?'700':'500')+';">'+cat+'</button>';
+  }).join('');
+  tabs.querySelectorAll('.emoji-tab').forEach(function(btn){
+    btn.addEventListener('click',function(){
+      EMOJI_ACTIVE_CAT=this.getAttribute('data-cat');
+      buildEmojiPicker();
+    });
+  });
+  var grid=document.getElementById('emojiGrid');
+  grid.innerHTML=EMOJI_CATEGORIES[EMOJI_ACTIVE_CAT].map(function(em){
+    return '<button type="button" class="emoji-opt" data-em="'+em+'" style="border:none;background:none;font-size:17px;padding:4px;cursor:pointer;border-radius:6px;">'+em+'</button>';
+  }).join('');
+  grid.querySelectorAll('.emoji-opt').forEach(function(btn){
+    btn.addEventListener('click',function(){
+      document.getElementById('newEmoji').value=this.getAttribute('data-em');
+      document.getElementById('emojiPicker').style.display='none';
+    });
+  });
+}
+buildEmojiPicker();
+document.getElementById('newEmoji').addEventListener('click',function(){
+  var box=document.getElementById('emojiPicker');
+  box.style.display=(box.style.display==='none'||!box.style.display)?'block':'none';
+});
+document.addEventListener('click',function(e){
+  var box=document.getElementById('emojiPicker');
+  if(box.style.display==='block' && e.target.id!=='newEmoji' && !box.contains(e.target)){
+    box.style.display='none';
+  }
+});
+
+document.getElementById('openAddHabit').addEventListener('click',function(){
+  var panel=document.getElementById('addHabitPanel');
+  var showing=panel.style.display!=='none';
+  panel.style.display=showing?'none':'block';
+  if(!showing){
+    document.getElementById('newGoal').value=jalMonthLength(curJY,curJM);
+    document.getElementById('newName').value='';
+    document.getElementById('newEmoji').value='✨';
+    document.getElementById('newName').focus();
+  }
+});
+document.getElementById('cancelAddHabit').addEventListener('click',function(){
+  document.getElementById('addHabitPanel').style.display='none';
+});
+document.getElementById('addHabitBtn').addEventListener('click',function(){
+  var data=getMonthData(curJY,curJM);
+  var name=document.getElementById('newName').value.trim();
+  var emoji=document.getElementById('newEmoji').value.trim()||'✅';
+  var goal=Math.max(1,parseInt(document.getElementById('newGoal').value)||jalMonthLength(curJY,curJM));
+  if(!name){ document.getElementById('newName').focus(); return; }
+  data.habits.push({id:uid(),emoji:emoji,name:name,goal:goal});
+  saveStore();
+  document.getElementById('addHabitPanel').style.display='none';
+  render();
+});
+document.getElementById('newName').addEventListener('keydown',function(e){
+  if(e.key==='Enter') document.getElementById('addHabitBtn').click();
+});
+
+/* ---------- Holiday announcement ---------- */
+function showHolidayAnnouncement(){
+  var jy=todayJ.jy, jm=todayJ.jm;
+  var list=monthHolidayList(jy,jm);
+  document.getElementById('holidayModalTitle').textContent='تعطیلات '+JALALI_MONTH_NAMES[jm-1]+' '+jy;
+  var sub=document.getElementById('holidayModalSub');
+  var listEl=document.getElementById('holidayModalList');
+  if(!list.length){
+    sub.textContent='این ماه (به‌جز جمعه‌ها) روز تعطیل رسمی‌ای ثبت نشده.';
+    listEl.innerHTML='';
+  } else {
+    sub.textContent=list.length+' روز تعطیل رسمی این ماه:';
+    listEl.innerHTML=list.map(function(item){
+      return '<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:#FCF4F4;border-radius:12px;margin-bottom:8px;">'+
+        '<div style="flex:none;width:38px;height:38px;border-radius:10px;background:#F6C9C9;color:#B32424;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;">'+item.day+'</div>'+
+        '<div style="font-size:12.5px;color:var(--ink);">'+escAttr(item.title)+'</div>'+
+        '</div>';
+    }).join('');
+  }
+  document.getElementById('holidayOverlay').style.display='flex';
+}
+document.getElementById('closeHolidayModal').addEventListener('click',function(){
+  document.getElementById('holidayOverlay').style.display='none';
+});
+document.getElementById('holidayOverlay').addEventListener('click',function(e){
+  if(e.target===this) this.style.display='none';
+});
+window.__onUnlocked=function(){ showHolidayAnnouncement(); };
+
 render();
+if(window.__showHolidayPopup) showHolidayAnnouncement();
 </script>
 </body>
 </html>
