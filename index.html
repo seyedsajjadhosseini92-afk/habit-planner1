@@ -106,6 +106,8 @@
   /* ---------- Hero ---------- */
   .hero{
     background:linear-gradient(135deg,#20264D,#2E2A63 55%,#3D2F6B);
+    background-size:cover;
+    background-position:center;
     color:#F4F2FF;
     border-radius:20px;
     padding:28px 26px;
@@ -291,6 +293,15 @@
   }
   .notes-card textarea:focus{outline:none;border-color:var(--accent);}
 
+  .tpl-card{border:1px solid var(--line);border-radius:14px;padding:16px;background:#FCFBF7;display:flex;flex-direction:column;gap:10px;}
+  .tpl-card .tpl-ico{font-size:24px;}
+  .tpl-card h3{margin:0;font-size:14.5px;font-weight:700;}
+  .tpl-card p{margin:0;font-size:12px;color:var(--ink-soft);}
+  .tpl-chips{display:flex;flex-wrap:wrap;gap:5px;}
+  .tpl-chip{font-size:11px;background:var(--accent-soft);color:var(--accent);padding:3px 8px;border-radius:20px;}
+  .tpl-apply-btn{margin-top:auto;padding:8px;border:none;border-radius:9px;background:var(--accent);color:#fff;font-family:inherit;font-weight:700;font-size:12.5px;cursor:pointer;}
+  .tpl-apply-btn:disabled{background:var(--success);cursor:default;}
+
   footer{text-align:center;color:var(--ink-soft);font-size:11.5px;margin-top:24px;}
 
   @media (max-width:820px){
@@ -314,7 +325,7 @@
 <div id="appRoot" style="display:none;">
 <div class="wrap">
 
-  <div class="hero">
+  <div class="hero" id="heroBanner">
     <div class="hero-title">
       <span class="eyebrow">پلنر عادت‌ها</span>
       <h1>هر روز، یک قدم</h1>
@@ -426,6 +437,18 @@
     <textarea id="notesArea" placeholder="یادداشت این ماه را اینجا بنویس..."></textarea>
   </div>
 
+  <div class="card" id="templatesCard">
+    <h2 style="margin-bottom:2px;">الگوهای آماده</h2>
+    <p class="sub" style="margin-bottom:16px;">چند ست عادت پرکاربرد برای سبک‌های مختلف — انتخاب کن تا به لیست عادت‌های فعلیت اضافه بشه (چیزی حذف نمی‌شه).</p>
+    <div id="templatesGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px;"></div>
+  </div>
+
+  <div class="card" id="famousCard">
+    <h2 style="margin-bottom:2px;">پیشنهاد افراد مشهور</h2>
+    <p class="sub" style="margin-bottom:16px;">عادت‌هایی که چند چهره‌ی شناخته‌شده، طبق مصاحبه‌ها و گزارش‌های منتشرشده، بهشون پایبندن — نه ادعای تأییدشده‌ی رسمی خودشون.</p>
+    <div id="famousGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px;"></div>
+  </div>
+
   <footer>داده‌ها فقط روی همین مرورگر ذخیره می‌شوند.</footer>
 </div>
 </div>
@@ -487,6 +510,16 @@
       <div id="bgGallery" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;"></div>
       <input type="file" id="bgUploadInput" accept="image/*" style="display:none;">
       <p style="font-size:11px;color:var(--ink-soft);margin:8px 0 0;">تصاویر از اینترنت لود می‌شن، پس برای دیدنشون به اینترنت نیاز داری. رنگ‌ها و گرادینت‌ها همیشه کار می‌کنن.</p>
+    </div>
+
+    <div style="margin-bottom:16px;border-top:1px solid var(--line);padding-top:14px;">
+      <label style="display:block;font-size:12.5px;font-weight:700;margin-bottom:6px;">پشتیبان‌گیری / انتقال داده</label>
+      <p style="font-size:11px;color:var(--ink-soft);margin:0 0 10px;">برای انتقال اطلاعات به دستگاه یا برنامه‌ی دیگه (مثلاً نسخه‌ی دسکتاپ)، اول از اینجا خروجی بگیر، بعد تو برنامه‌ی مقصد همون فایل رو وارد کن.</p>
+      <div style="display:flex;gap:8px;">
+        <button id="exportDataBtn" style="flex:1;padding:9px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);font-family:inherit;font-size:12.5px;cursor:pointer;">⬇ خروجی گرفتن (JSON)</button>
+        <button id="importDataBtn" style="flex:1;padding:9px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);font-family:inherit;font-size:12.5px;cursor:pointer;">⬆ وارد کردن فایل</button>
+      </div>
+      <input type="file" id="importDataInput" accept="application/json" style="display:none;">
     </div>
 
     <div style="display:flex;gap:8px;">
@@ -721,13 +754,27 @@ var pendingBackground=JSON.parse(JSON.stringify(store.background));
 
 function applyBackground(bg){
   var root=document.documentElement.style;
+  var hero=document.getElementById('heroBanner');
   if(!bg||bg.type==='color'){
     root.setProperty('--bg-image','none');
     if(bg&&bg.value){ THEME.bg=bg.value; applyThemeToRoot(); }
+    if(hero) hero.style.backgroundImage='';
   } else if(bg.type==='gradient'){
     root.setProperty('--bg-image',bg.value);
+    if(hero) hero.style.backgroundImage=bg.value;
   } else { // image or custom
-    root.setProperty('--bg-image','url("'+bg.value+'")');
+    var fallbackGrad='linear-gradient(135deg,#20264D,#2E2A63 55%,#3D2F6B)';
+    var probe=new Image();
+    probe.onload=function(){
+      root.setProperty('--bg-image','url("'+bg.value+'")');
+      if(hero) hero.style.backgroundImage='linear-gradient(135deg,rgba(20,22,50,.72),rgba(35,30,70,.55) 60%,rgba(45,35,80,.72)), url("'+bg.value+'")';
+    };
+    probe.onerror=function(){
+      console.warn('پس‌زمینه لود نشد (اینترنت/فیلترینگ)، برگشت به حالت پیش‌فرض:', bg.value);
+      root.setProperty('--bg-image','none');
+      if(hero) hero.style.backgroundImage=fallbackGrad;
+    };
+    probe.src=bg.value;
   }
 }
 applyBackground(store.background);
@@ -794,13 +841,144 @@ function monthKey(jy,jm){return jy+'-'+jm;}
 
 function defaultHabits(){
   return [
-    {id:uid(),emoji:'⏰',name:'بیدار شدن زود',goal:21},
-    {id:uid(),emoji:'💧',name:'۸ لیوان آب',goal:26},
-    {id:uid(),emoji:'📚',name:'۲۰ صفحه کتاب',goal:20},
-    {id:uid(),emoji:'💪',name:'ورزش',goal:16}
+    {id:uid(),emoji:'💧',name:'۸ لیوان آب',goal:26}
   ];
 }
 function uid(){return 'id'+Math.random().toString(36).slice(2,10);}
+
+/* =========================================================
+   Ready-made habit templates (freq = fraction of days-in-month)
+   ========================================================= */
+var HABIT_TEMPLATES=[
+  {
+    id:'athlete', ico:'🏋️', title:'ورزشکاران حرفه‌ای',
+    desc:'برای کسایی که تمرین و ریکاوری بخش اصلی روزشونه.',
+    habits:[
+      {emoji:'🥤',name:'۱۲ لیوان آب',freq:1},
+      {emoji:'💪',name:'تمرین قدرتی',freq:0.65},
+      {emoji:'🏃',name:'کاردیو',freq:0.4},
+      {emoji:'😴',name:'۸ ساعت خواب',freq:1},
+      {emoji:'🧘',name:'کشش و ریکاوری',freq:0.8},
+      {emoji:'🥗',name:'وعده‌ی پروتئین کافی',freq:1}
+    ]
+  },
+  {
+    id:'coder', ico:'💻', title:'برنامه‌نویسان',
+    desc:'تمرکز عمیق، سلامت چشم و کمر، بدون سوختن.',
+    habits:[
+      {emoji:'🧠',name:'۴ ساعت کار عمیق',freq:0.7},
+      {emoji:'👀',name:'استراحت چشم هر ساعت',freq:1},
+      {emoji:'🚶',name:'پیاده‌روی کوتاه',freq:0.65},
+      {emoji:'📚',name:'مطالعه‌ی فنی',freq:0.5},
+      {emoji:'🧍',name:'اصلاح وضعیت نشستن',freq:1},
+      {emoji:'🛌',name:'خواب قبل از ۱۲',freq:0.85}
+    ]
+  },
+  {
+    id:'early-riser', ico:'🌅', title:'موفقیت روزانه',
+    desc:'شروع منظم صبح، برنامه‌ریزی و تمرکز روی اهداف.',
+    habits:[
+      {emoji:'⏰',name:'بیدار شدن زود',freq:1},
+      {emoji:'📝',name:'برنامه‌ریزی روز',freq:1},
+      {emoji:'🙏',name:'یادداشت قدردانی',freq:0.85},
+      {emoji:'📵',name:'دوری از گوشی صبح',freq:0.85},
+      {emoji:'📖',name:'مطالعه‌ی روزانه',freq:0.65}
+    ]
+  },
+  {
+    id:'student', ico:'🎓', title:'تمرکز و مطالعه',
+    desc:'مناسب دانشجوها و کسایی که برای امتحان/دوره آماده می‌شن.',
+    habits:[
+      {emoji:'📚',name:'مرور درس',freq:1},
+      {emoji:'⏱️',name:'تکنیک پومودورو',freq:0.65},
+      {emoji:'📵',name:'حذف حواس‌پرتی گوشی',freq:1},
+      {emoji:'💧',name:'آب کافی',freq:1},
+      {emoji:'😴',name:'خواب منظم',freq:0.9}
+    ]
+  },
+  {
+    id:'calm-mind', ico:'🧘', title:'آرامش ذهن',
+    desc:'برای کاهش استرس و بهبود حال روزانه.',
+    habits:[
+      {emoji:'🧘',name:'مدیتیشن ۱۰ دقیقه',freq:0.8},
+      {emoji:'📓',name:'یادداشت احساسات',freq:0.65},
+      {emoji:'🌳',name:'وقت در طبیعت',freq:0.35},
+      {emoji:'📵',name:'کاهش زمان گوشی',freq:0.85},
+      {emoji:'😴',name:'خواب کافی',freq:0.9}
+    ]
+  }
+];
+
+var FAMOUS_PEOPLE=[
+  {
+    id:'ronaldo', ico:'⚽', title:'کریستیانو رونالدو',
+    desc:'طبق مصاحبه‌هاش: اولین کار بعد بیدار شدن، آب‌رسانی بدنه؛ نه قهوه، نه چیز دیگه.',
+    habits:[
+      {emoji:'💧',name:'آب خوردن فوری بعد بیداری',freq:1},
+      {emoji:'😴',name:'چرت/استراحت روزانه برای ریکاوری',freq:0.85}
+    ]
+  },
+  {
+    id:'gates', ico:'💻', title:'بیل گیتس',
+    desc:'هر روز صبح ورزش می‌کنه (همراه با یادگیری چیز جدید)، و شب قبل خواب حداقل یک ساعت مطالعه می‌کنه.',
+    habits:[
+      {emoji:'📖',name:'۱ ساعت مطالعه قبل خواب',freq:0.9},
+      {emoji:'🏃',name:'ورزش صبحگاهی + یادگیری هم‌زمان',freq:0.85}
+    ]
+  },
+  {
+    id:'cook', ico:'🍏', title:'تیم کوک',
+    desc:'خیلی زود بیدار می‌شه تا صبحش رو خودش کنترل کنه، بعد یک ساعت تمرین بدنی.',
+    habits:[
+      {emoji:'⏰',name:'بیدار شدن خیلی زود',freq:1},
+      {emoji:'💪',name:'۱ ساعت تمرین بدنی صبحگاهی',freq:0.85}
+    ]
+  },
+  {
+    id:'obama', ico:'🏃‍♀️', title:'میشل اوباما',
+    desc:'ورزش صبحگاهی رو حتی تو سفر هم حفظ می‌کنه (با یه طناب ساده).',
+    habits:[
+      {emoji:'🤸',name:'ورزش صبحگاهی (حتی موقع سفر)',freq:0.85}
+    ]
+  }
+];
+
+function renderPicksGrid(list, gridId){
+  var el=document.getElementById(gridId);
+  if(!el) return;
+  var daysInMonth=jalMonthLength(curJY,curJM);
+  el.innerHTML=list.map(function(t){
+    var chips=t.habits.map(function(h){return '<span class="tpl-chip">'+h.emoji+' '+h.name+'</span>';}).join('');
+    return '<div class="tpl-card">'+
+      '<div class="tpl-ico">'+t.ico+'</div>'+
+      '<h3>'+t.title+'</h3>'+
+      '<p>'+t.desc+'</p>'+
+      '<div class="tpl-chips">'+chips+'</div>'+
+      '<button class="tpl-apply-btn" data-tpl="'+t.id+'" data-grid="'+gridId+'">افزودن این الگو</button>'+
+      '</div>';
+  }).join('');
+  el.querySelectorAll('.tpl-apply-btn').forEach(function(btn){
+    btn.addEventListener('click',function(){
+      var tplId=this.getAttribute('data-tpl');
+      var tpl=list.find(function(x){return x.id===tplId;});
+      if(!tpl) return;
+      if(!confirm('«'+tpl.title+'» با '+tpl.habits.length+' عادت به لیست فعلیت اضافه بشه؟')) return;
+      var data=getMonthData(curJY,curJM);
+      var dim=jalMonthLength(curJY,curJM);
+      tpl.habits.forEach(function(h){
+        data.habits.push({id:uid(), emoji:h.emoji, name:h.name, goal:Math.max(1,Math.round(dim*h.freq))});
+      });
+      saveStore();
+      this.textContent='✓ اضافه شد';
+      this.disabled=true;
+      render();
+    });
+  });
+}
+function renderTemplates(){
+  renderPicksGrid(HABIT_TEMPLATES, 'templatesGrid');
+  renderPicksGrid(FAMOUS_PEOPLE, 'famousGrid');
+}
 
 function getMonthData(jy,jm){
   var key=monthKey(jy,jm);
@@ -1191,11 +1369,11 @@ function renderMonthlySection(data){
    ========================================================= */
 document.getElementById('prevMonth').addEventListener('click',function(){
   curJM--; if(curJM<1){curJM=12;curJY--;}
-  saveStore(); render();
+  saveStore(); render(); renderTemplates();
 });
 document.getElementById('nextMonth').addEventListener('click',function(){
   curJM++; if(curJM>12){curJM=1;curJY++;}
-  saveStore(); render();
+  saveStore(); render(); renderTemplates();
 });
 document.getElementById('notesArea').addEventListener('input',function(){
   var data=getMonthData(curJY,curJM);
@@ -1283,6 +1461,42 @@ document.getElementById('resetSettingsBtn').addEventListener('click',function(){
   openSettingsPanel();
 });
 applyCompactMode();
+
+/* ---------- Backup / transfer (export-import) ---------- */
+document.getElementById('exportDataBtn').addEventListener('click',function(){
+  var raw=localStorage.getItem(STORE_KEY)||JSON.stringify(store);
+  var blob=new Blob([raw],{type:'application/json'});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a');
+  var todayStr=todayJ.jy+'-'+todayJ.jm+'-'+todayJ.jd;
+  a.href=url; a.download='habit-planner-backup-'+todayStr+'.json';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+});
+document.getElementById('importDataBtn').addEventListener('click',function(){
+  document.getElementById('importDataInput').click();
+});
+document.getElementById('importDataInput').addEventListener('change',function(e){
+  var file=e.target.files&&e.target.files[0];
+  if(!file) return;
+  var reader=new FileReader();
+  reader.onload=function(ev){
+    try{
+      var parsed=JSON.parse(ev.target.result);
+      if(!parsed||typeof parsed!=='object'||!parsed.months){
+        alert('این فایل معتبر به نظر نمی‌رسه.');
+        return;
+      }
+      if(!confirm('وارد کردن این فایل، اطلاعات فعلی برنامه رو جایگزین می‌کنه. ادامه بدم؟')) return;
+      localStorage.setItem(STORE_KEY, JSON.stringify(parsed));
+      alert('انجام شد! صفحه رو رفرش می‌کنم.');
+      location.reload();
+    }catch(err){
+      alert('خطا در خوندن فایل: '+err.message);
+    }
+  };
+  reader.readAsText(file);
+});
 
 /* ---------- Add-habit panel + emoji picker ---------- */
 var EMOJI_CATEGORIES={
@@ -1391,6 +1605,7 @@ document.getElementById('holidayOverlay').addEventListener('click',function(e){
 window.__onUnlocked=function(){ showHolidayAnnouncement(); };
 
 render();
+renderTemplates();
 if(window.__showHolidayPopup) showHolidayAnnouncement();
 </script>
 </body>
