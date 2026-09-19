@@ -1,4 +1,4 @@
-const CACHE_NAME = 'habit-planner-v1';
+const CACHE_NAME = 'habit-planner-v2';
 const URLS_TO_CACHE = [
   './',
   './index.html',
@@ -21,18 +21,17 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
+// Network-first: always try to get the freshest file from the internet.
+// Only fall back to the saved (cached) copy if there's no internet connection.
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
   event.respondWith(
-    caches.match(event.request).then((cached) => {
-      const fetchPromise = fetch(event.request).then((response) => {
-        if (response && response.status === 200 && event.request.url.startsWith(self.location.origin)) {
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
-        }
-        return response;
-      }).catch(() => cached);
-      return cached || fetchPromise;
-    })
+    fetch(event.request).then((response) => {
+      if (response && response.status === 200 && event.request.url.startsWith(self.location.origin)) {
+        const clone = response.clone();
+        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+      }
+      return response;
+    }).catch(() => caches.match(event.request))
   );
 });
